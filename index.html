@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClutterGone - Internet Connection Checker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">ClutterGone</h1>
+            <p class="subtitle">Internet Connection Checker</p>
+        </header>
+        
+        <main class="main-content">
+            <div class="connection-card">
+                <div class="status-indicator" id="statusIndicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span class="status-text" id="statusText">Ready to check</span>
+                </div>
+                
+                <div class="button-group">
+                    <button class="check-button" id="checkButton" onclick="checkConnection()">
+                        <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"/>
+                        </svg>
+                        Check Connection
+                    </button>
+                    
+                    <button class="speed-test-button" id="speedTestButton" onclick="runSpeedTest()">
+                        <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        Speed Test
+                    </button>
+                </div>
+                
+                <div class="connection-details" id="connectionDetails">
+                    <div class="detail-item">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value" id="connectionStatus">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Response Time:</span>
+                        <span class="detail-value" id="responseTime">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Last Check:</span>
+                        <span class="detail-value" id="lastCheck">-</span>
+                    </div>
+                </div>
+                
+                <div class="speed-results" id="speedResults" style="display: none;">
+                    <h3 class="speed-title">Speed Test Results</h3>
+                    <div class="speed-grid">
+                        <div class="speed-item download">
+                            <div class="speed-icon">⬇️</div>
+                            <div class="speed-info">
+                                <span class="speed-label">Download</span>
+                                <span class="speed-value" id="downloadSpeed">-</span>
+                                <span class="speed-unit">Mbps</span>
+                            </div>
+                        </div>
+                        <div class="speed-item upload">
+                            <div class="speed-icon">⬆️</div>
+                            <div class="speed-info">
+                                <span class="speed-label">Upload</span>
+                                <span class="speed-value" id="uploadSpeed">-</span>
+                                <span class="speed-unit">Mbps</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="speed-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Test Duration:</span>
+                            <span class="detail-value" id="testDuration">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Last Speed Test:</span>
+                            <span class="detail-value" id="lastSpeedTest">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h3>How it works</h3>
+                <p>Click "Check Connection" to test your internet connectivity, or "Speed Test" to measure your upload and download speeds. The tool will attempt to reach reliable servers and measure actual network performance.</p>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <p>&copy; 2024 ClutterGone. Simple tools for a clutter-free digital life.</p>
+        </footer>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
