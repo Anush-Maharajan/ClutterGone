@@ -3,9 +3,15 @@ const statusIndicator = document.getElementById('statusIndicator');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const checkButton = document.getElementById('checkButton');
+const speedTestButton = document.getElementById('speedTestButton');
 const connectionStatus = document.getElementById('connectionStatus');
 const responseTime = document.getElementById('responseTime');
 const lastCheck = document.getElementById('lastCheck');
+const speedResults = document.getElementById('speedResults');
+const downloadSpeed = document.getElementById('downloadSpeed');
+const uploadSpeed = document.getElementById('uploadSpeed');
+const testDuration = document.getElementById('testDuration');
+const lastSpeedTest = document.getElementById('lastSpeedTest');
 
 // Connection test URLs (multiple fallbacks for reliability)
 const testUrls = [
@@ -15,7 +21,16 @@ const testUrls = [
     'https://api.github.com/zen'
 ];
 
+// Speed test configuration
+const speedTestConfig = {
+    downloadTestSize: 10 * 1024 * 1024, // 10MB
+    uploadTestSize: 5 * 1024 * 1024,    // 5MB
+    testDuration: 10000,                 // 10 seconds max
+    progressInterval: 100                 // Update progress every 100ms
+};
+
 let isChecking = false;
+let isSpeedTesting = false;
 
 // Main connection check function
 async function checkConnection() {
@@ -91,6 +106,156 @@ async function checkConnection() {
     }, 1000);
 }
 
+// Speed test function
+async function runSpeedTest() {
+    if (isSpeedTesting) return;
+    
+    isSpeedTesting = true;
+    speedTestButton.disabled = true;
+    checkButton.disabled = true;
+    
+    // Show speed results section
+    speedResults.style.display = 'block';
+    
+    // Reset values
+    downloadSpeed.textContent = 'Testing...';
+    uploadSpeed.textContent = 'Testing...';
+    testDuration.textContent = 'In progress...';
+    
+    const startTime = performance.now();
+    
+    try {
+        // Run download speed test
+        const downloadResult = await testDownloadSpeed();
+        
+        // Run upload speed test
+        const uploadResult = await testUploadSpeed();
+        
+        // Calculate total test duration
+        const totalDuration = performance.now() - startTime;
+        
+        // Display results
+        downloadSpeed.textContent = downloadResult.toFixed(2);
+        uploadSpeed.textContent = uploadResult.toFixed(2);
+        testDuration.textContent = `${(totalDuration / 1000).toFixed(1)}s`;
+        lastSpeedTest.textContent = new Date().toLocaleTimeString();
+        
+        // Update status
+        updateStatus('connected', 'Speed test completed');
+        
+    } catch (error) {
+        console.error('Speed test failed:', error);
+        
+        downloadSpeed.textContent = 'Failed';
+        uploadSpeed.textContent = 'Failed';
+        testDuration.textContent = 'Error';
+        lastSpeedTest.textContent = new Date().toLocaleTimeString();
+        
+        updateStatus('disconnected', 'Speed test failed');
+    }
+    
+    // Reset button states
+    setTimeout(() => {
+        isSpeedTesting = false;
+        speedTestButton.disabled = false;
+        checkButton.disabled = false;
+    }, 1000);
+}
+
+// Download speed test
+async function testDownloadSpeed() {
+    return new Promise((resolve, reject) => {
+        const startTime = performance.now();
+        let downloadedBytes = 0;
+        let testStartTime = performance.now();
+        
+        // Create a large blob for download testing
+        const testData = new Blob([new ArrayBuffer(speedTestConfig.downloadTestSize)]);
+        const testUrl = URL.createObjectURL(testData);
+        
+        const xhr = new XMLHttpRequest();
+        
+        xhr.onprogress = function(event) {
+            if (event.lengthComputable) {
+                downloadedBytes = event.loaded;
+                const elapsed = performance.now() - testStartTime;
+                const speedMbps = (downloadedBytes * 8 / 1000000) / (elapsed / 1000);
+                
+                // Update progress every 100ms
+                if (elapsed % speedTestConfig.progressInterval < 16) { // 60fps check
+                    downloadSpeed.textContent = `${speedMbps.toFixed(2)}`;
+                }
+            }
+        };
+        
+        xhr.onload = function() {
+            const totalTime = performance.now() - startTime;
+            const speedMbps = (downloadedBytes * 8 / 1000000) / (totalTime / 1000);
+            URL.revokeObjectURL(testUrl);
+            resolve(speedMbps);
+        };
+        
+        xhr.onerror = function() {
+            URL.revokeObjectURL(testUrl);
+            reject(new Error('Download test failed'));
+        };
+        
+        xhr.ontimeout = function() {
+            URL.revokeObjectURL(testUrl);
+            reject(new Error('Download test timeout'));
+        };
+        
+        xhr.timeout = speedTestConfig.testDuration;
+        xhr.open('GET', testUrl);
+        xhr.send();
+    });
+}
+
+// Upload speed test
+async function testUploadSpeed() {
+    return new Promise((resolve, reject) => {
+        const startTime = performance.now();
+        let uploadedBytes = 0;
+        let testStartTime = performance.now();
+        
+        // Create test data for upload
+        const testData = new Blob([new ArrayBuffer(speedTestConfig.uploadTestSize)]);
+        
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.onprogress = function(event) {
+            if (event.lengthComputable) {
+                uploadedBytes = event.loaded;
+                const elapsed = performance.now() - testStartTime;
+                const speedMbps = (uploadedBytes * 8 / 1000000) / (elapsed / 1000);
+                
+                // Update progress every 100ms
+                if (elapsed % speedTestConfig.progressInterval < 16) {
+                    uploadSpeed.textContent = `${speedMbps.toFixed(2)}`;
+                }
+            }
+        };
+        
+        xhr.onload = function() {
+            const totalTime = performance.now() - startTime;
+            const speedMbps = (uploadedBytes * 8 / 1000000) / (totalTime / 1000);
+            resolve(speedMbps);
+        };
+        
+        xhr.onerror = function() {
+            reject(new Error('Upload test failed'));
+        };
+        
+        xhr.ontimeout = function() {
+            reject(new Error('Upload test timeout'));
+        };
+        
+        xhr.timeout = speedTestConfig.testDuration;
+        xhr.open('POST', 'https://httpbin.org/post');
+        xhr.send(testData);
+    });
+}
+
 // Update status indicator
 function updateStatus(status, text) {
     // Remove all status classes
@@ -120,7 +285,7 @@ function checkConnectionAlternative() {
 
 // Listen for online/offline events
 window.addEventListener('online', () => {
-    if (!isChecking) {
+    if (!isChecking && !isSpeedTesting) {
         updateStatus('connected', 'Connection restored');
         connectionStatus.textContent = 'Connected (Auto-detected)';
         lastCheck.textContent = new Date().toLocaleTimeString();
@@ -128,18 +293,18 @@ window.addEventListener('online', () => {
 });
 
 window.addEventListener('offline', () => {
-    if (!isChecking) {
+    if (!isChecking && !isSpeedTesting) {
         updateStatus('disconnected', 'Connection lost');
         connectionStatus.textContent = 'Disconnected (Auto-detected)';
         lastCheck.textContent = new Date().toLocaleTimeString();
     }
 });
 
-// Add keyboard shortcut (Space or Enter key)
+// Add keyboard shortcuts (Space or Enter key)
 document.addEventListener('keydown', (event) => {
     if (event.code === 'Space' || event.code === 'Enter') {
         event.preventDefault();
-        if (!isChecking) {
+        if (!isChecking && !isSpeedTesting) {
             checkConnection();
         }
     }
@@ -156,6 +321,16 @@ checkButton.addEventListener('touchend', () => {
     checkButton.style.transform = '';
 });
 
+speedTestButton.addEventListener('touchstart', () => {
+    if (!isSpeedTesting) {
+        speedTestButton.style.transform = 'scale(0.95)';
+    }
+});
+
+speedTestButton.addEventListener('touchend', () => {
+    speedTestButton.style.transform = '';
+});
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', () => {
     // Check initial connection status
@@ -167,12 +342,21 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionStatus.textContent = 'Disconnected';
     }
     
-    // Add loading animation to button
+    // Add loading animation to buttons
     checkButton.addEventListener('click', () => {
         if (!isChecking) {
             checkButton.style.transform = 'scale(0.95)';
             setTimeout(() => {
                 checkButton.style.transform = '';
+            }, 150);
+        }
+    });
+    
+    speedTestButton.addEventListener('click', () => {
+        if (!isSpeedTesting) {
+            speedTestButton.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                speedTestButton.style.transform = '';
             }, 150);
         }
     });
