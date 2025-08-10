@@ -12,6 +12,8 @@ const downloadSpeed = document.getElementById('downloadSpeed');
 const uploadSpeed = document.getElementById('uploadSpeed');
 const testDuration = document.getElementById('testDuration');
 const lastSpeedTest = document.getElementById('lastSpeedTest');
+const debugInfo = document.getElementById('debugInfo');
+const debugContent = document.getElementById('debugContent');
 
 // Connection test URLs (multiple fallbacks for reliability)
 const testUrls = [
@@ -23,14 +25,23 @@ const testUrls = [
 
 // Speed test configuration
 const speedTestConfig = {
-    downloadTestSize: 10 * 1024 * 1024, // 10MB
-    uploadTestSize: 5 * 1024 * 1024,    // 5MB
-    testDuration: 10000,                 // 10 seconds max
-    progressInterval: 100                 // Update progress every 100ms
+    downloadTestSize: 5 * 1024 * 1024,  // 5MB
+    testDuration: 15000,                 // 15 seconds max
+    progressInterval: 200                 // Update progress every 200ms
 };
 
 let isChecking = false;
 let isSpeedTesting = false;
+
+// Debug logging function
+function logDebug(message) {
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = document.createElement('p');
+    logEntry.textContent = `[${timestamp}] ${message}`;
+    debugContent.appendChild(logEntry);
+    debugContent.scrollTop = debugContent.scrollHeight;
+    console.log(`[DEBUG] ${message}`);
+}
 
 // Main connection check function
 async function checkConnection() {
@@ -52,8 +63,7 @@ async function checkConnection() {
                 const response = await fetch(url, {
                     method: 'HEAD',
                     mode: 'no-cors',
-                    cache: 'no-cache',
-                    timeout: 5000
+                    cache: 'no-cache'
                 });
                 
                 success = true;
@@ -114,8 +124,10 @@ async function runSpeedTest() {
     speedTestButton.disabled = true;
     checkButton.disabled = true;
     
-    // Show speed results section
+    // Show speed results section and debug info
     speedResults.style.display = 'block';
+    debugInfo.style.display = 'block';
+    debugContent.innerHTML = '<p>Starting speed test...</p>';
     
     // Reset values
     downloadSpeed.textContent = 'Testing...';
@@ -125,11 +137,17 @@ async function runSpeedTest() {
     const startTime = performance.now();
     
     try {
+        logDebug('Running primary speed test...');
+        
         // Run download speed test
+        logDebug('Testing download speed...');
         const downloadResult = await testDownloadSpeed();
+        logDebug(`Download test completed: ${downloadResult.toFixed(2)} Mbps`);
         
         // Run upload speed test
+        logDebug('Testing upload speed...');
         const uploadResult = await testUploadSpeed();
+        logDebug(`Upload test completed: ${uploadResult.toFixed(2)} Mbps`);
         
         // Calculate total test duration
         const totalDuration = performance.now() - startTime;
@@ -140,18 +158,41 @@ async function runSpeedTest() {
         testDuration.textContent = `${(totalDuration / 1000).toFixed(1)}s`;
         lastSpeedTest.textContent = new Date().toLocaleTimeString();
         
+        logDebug(`Speed test completed successfully in ${(totalDuration / 1000).toFixed(1)}s`);
+        
         // Update status
         updateStatus('connected', 'Speed test completed');
         
     } catch (error) {
         console.error('Speed test failed:', error);
+        logDebug(`Primary speed test failed: ${error.message}`);
         
-        downloadSpeed.textContent = 'Failed';
-        uploadSpeed.textContent = 'Failed';
-        testDuration.textContent = 'Error';
-        lastSpeedTest.textContent = new Date().toLocaleTimeString();
-        
-        updateStatus('disconnected', 'Speed test failed');
+        // Try fallback speed test
+        try {
+            logDebug('Trying fallback speed test...');
+            const fallbackResult = await runFallbackSpeedTest();
+            
+            downloadSpeed.textContent = fallbackResult.download.toFixed(2);
+            uploadSpeed.textContent = fallbackResult.upload.toFixed(2);
+            testDuration.textContent = `${((performance.now() - startTime) / 1000).toFixed(1)}s`;
+            lastSpeedTest.textContent = new Date().toLocaleTimeString();
+            
+            logDebug(`Fallback speed test completed: D=${fallbackResult.download.toFixed(2)} Mbps, U=${fallbackResult.upload.toFixed(2)} Mbps`);
+            
+            updateStatus('connected', 'Speed test completed (fallback)');
+            
+        } catch (fallbackError) {
+            console.error('Fallback speed test also failed:', fallbackError);
+            logDebug(`Fallback speed test failed: ${fallbackError.message}`);
+            
+            downloadSpeed.textContent = 'Failed';
+            uploadSpeed.textContent = 'Failed';
+            testDuration.textContent = 'Error';
+            lastSpeedTest.textContent = new Date().toLocaleTimeString();
+            
+            updateStatus('disconnected', 'Speed test failed');
+            showErrorMessage('Speed test failed. Please check your connection and try again.');
+        }
     }
     
     // Reset button states
@@ -162,46 +203,111 @@ async function runSpeedTest() {
     }, 1000);
 }
 
-// Download speed test
+// Fallback speed test using multiple endpoints
+async function runFallbackSpeedTest() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Test download speed using multiple small files
+            const downloadStart = performance.now();
+            let totalDownloaded = 0;
+            let downloadCount = 0;
+            
+            const downloadUrls = [
+                'https://www.google.com/favicon.ico',
+                'https://www.cloudflare.com/favicon.ico',
+                'https://httpbin.org/bytes/1024',
+                'https://httpbin.org/bytes/2048'
+            ];
+            
+            for (const url of downloadUrls) {
+                try {
+                    const response = await fetch(url, { cache: 'no-cache' });
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        totalDownloaded += blob.size;
+                        downloadCount++;
+                    }
+                } catch (e) {
+                    console.log(`Failed to download from ${url}:`, e.message);
+                }
+            }
+            
+            const downloadTime = (performance.now() - downloadStart) / 1000;
+            const downloadSpeedMbps = downloadCount > 0 ? (totalDownloaded * 8 / 1000000) / downloadTime : 0;
+            
+            // Test upload speed using small data
+            const uploadStart = performance.now();
+            let uploadSuccess = false;
+            
+            try {
+                const testData = new Uint8Array(1024); // 1KB
+                const response = await fetch('https://httpbin.org/post', {
+                    method: 'POST',
+                    body: testData,
+                    cache: 'no-cache'
+                });
+                
+                if (response.ok) {
+                    uploadSuccess = true;
+                }
+            } catch (e) {
+                console.log('Upload test failed:', e.message);
+            }
+            
+            const uploadTime = (performance.now() - uploadStart) / 1000;
+            const uploadSpeedMbps = uploadSuccess ? (1024 * 8 / 1000000) / uploadTime : 0;
+            
+            resolve({
+                download: downloadSpeedMbps,
+                upload: uploadSpeedMbps
+            });
+            
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+// Download speed test using actual file download
 async function testDownloadSpeed() {
     return new Promise((resolve, reject) => {
         const startTime = performance.now();
         let downloadedBytes = 0;
-        let testStartTime = performance.now();
+        let lastUpdateTime = startTime;
         
-        // Create a large blob for download testing
-        const testData = new Blob([new ArrayBuffer(speedTestConfig.downloadTestSize)]);
-        const testUrl = URL.createObjectURL(testData);
+        // Use a reliable file for download testing
+        const testUrl = 'https://httpbin.org/bytes/' + speedTestConfig.downloadTestSize;
         
         const xhr = new XMLHttpRequest();
         
         xhr.onprogress = function(event) {
             if (event.lengthComputable) {
                 downloadedBytes = event.loaded;
-                const elapsed = performance.now() - testStartTime;
-                const speedMbps = (downloadedBytes * 8 / 1000000) / (elapsed / 1000);
+                const currentTime = performance.now();
                 
-                // Update progress every 100ms
-                if (elapsed % speedTestConfig.progressInterval < 16) { // 60fps check
-                    downloadSpeed.textContent = `${speedMbps.toFixed(2)}`;
+                // Update progress every 200ms to avoid too frequent updates
+                if (currentTime - lastUpdateTime >= speedTestConfig.progressInterval) {
+                    const elapsed = (currentTime - startTime) / 1000;
+                    if (elapsed > 0) {
+                        const speedMbps = (downloadedBytes * 8 / 1000000) / elapsed;
+                        downloadSpeed.textContent = `${speedMbps.toFixed(2)}`;
+                    }
+                    lastUpdateTime = currentTime;
                 }
             }
         };
         
         xhr.onload = function() {
-            const totalTime = performance.now() - startTime;
-            const speedMbps = (downloadedBytes * 8 / 1000000) / (totalTime / 1000);
-            URL.revokeObjectURL(testUrl);
+            const totalTime = (performance.now() - startTime) / 1000;
+            const speedMbps = (downloadedBytes * 8 / 1000000) / totalTime;
             resolve(speedMbps);
         };
         
         xhr.onerror = function() {
-            URL.revokeObjectURL(testUrl);
             reject(new Error('Download test failed'));
         };
         
         xhr.ontimeout = function() {
-            URL.revokeObjectURL(testUrl);
             reject(new Error('Download test timeout'));
         };
         
@@ -211,34 +317,43 @@ async function testDownloadSpeed() {
     });
 }
 
-// Upload speed test
+// Upload speed test using actual file upload
 async function testUploadSpeed() {
     return new Promise((resolve, reject) => {
         const startTime = performance.now();
         let uploadedBytes = 0;
-        let testStartTime = performance.now();
+        let lastUpdateTime = startTime;
         
-        // Create test data for upload
-        const testData = new Blob([new ArrayBuffer(speedTestConfig.uploadTestSize)]);
+        // Create test data for upload (smaller size for faster testing)
+        const testData = new Uint8Array(1024 * 1024); // 1MB
+        for (let i = 0; i < testData.length; i++) {
+            testData[i] = Math.floor(Math.random() * 256);
+        }
+        
+        const blob = new Blob([testData]);
         
         const xhr = new XMLHttpRequest();
         
         xhr.upload.onprogress = function(event) {
             if (event.lengthComputable) {
                 uploadedBytes = event.loaded;
-                const elapsed = performance.now() - testStartTime;
-                const speedMbps = (uploadedBytes * 8 / 1000000) / (elapsed / 1000);
+                const currentTime = performance.now();
                 
-                // Update progress every 100ms
-                if (elapsed % speedTestConfig.progressInterval < 16) {
-                    uploadSpeed.textContent = `${speedMbps.toFixed(2)}`;
+                // Update progress every 200ms
+                if (currentTime - lastUpdateTime >= speedTestConfig.progressInterval) {
+                    const elapsed = (currentTime - startTime) / 1000;
+                    if (elapsed > 0) {
+                        const speedMbps = (uploadedBytes * 8 / 1000000) / elapsed;
+                        uploadSpeed.textContent = `${speedMbps.toFixed(2)}`;
+                    }
+                    lastUpdateTime = currentTime;
                 }
             }
         };
         
         xhr.onload = function() {
-            const totalTime = performance.now() - startTime;
-            const speedMbps = (uploadedBytes * 8 / 1000000) / (totalTime / 1000);
+            const totalTime = (performance.now() - startTime) / 1000;
+            const speedMbps = (uploadedBytes * 8 / 1000000) / totalTime;
             resolve(speedMbps);
         };
         
@@ -252,7 +367,7 @@ async function testUploadSpeed() {
         
         xhr.timeout = speedTestConfig.testDuration;
         xhr.open('POST', 'https://httpbin.org/post');
-        xhr.send(testData);
+        xhr.send(blob);
     });
 }
 

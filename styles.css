@@ -275,6 +275,43 @@ body {
     gap: 20px;
 }
 
+.debug-info {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #dee2e6;
+}
+
+.debug-info summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #495057;
+    padding: 5px 0;
+    user-select: none;
+}
+
+.debug-info summary:hover {
+    color: #007bff;
+}
+
+.debug-content {
+    margin-top: 10px;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #6c757d;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.debug-content p {
+    margin: 5px 0;
+    line-height: 1.4;
+}
+
 .info-section {
     background: rgba(255,255,255,0.1);
     backdrop-filter: blur(10px);
