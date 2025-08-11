@@ -7,6 +7,7 @@ const speedTestButton = document.getElementById('speedTestButton');
 const connectionStatus = document.getElementById('connectionStatus');
 const responseTime = document.getElementById('responseTime');
 const lastCheck = document.getElementById('lastCheck');
+const speedCard = document.getElementById('speedCard');
 const speedResults = document.getElementById('speedResults');
 const downloadSpeed = document.getElementById('downloadSpeed');
 const uploadSpeed = document.getElementById('uploadSpeed');
@@ -132,7 +133,7 @@ async function runSpeedTest() {
     speedTestButton.disabled = true;
     checkButton.disabled = true;
     
-    // Show speed results section and debug info
+    // Show results section and debug info inside the speed card
     speedResults.style.display = 'block';
     debugInfo.style.display = 'block';
     debugContent.innerHTML = '<p>Starting speed test...</p>';

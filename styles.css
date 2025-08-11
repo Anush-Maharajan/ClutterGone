@@ -62,6 +62,20 @@ body {
     box-shadow: 0 25px 50px rgba(0,0,0,0.15);
 }
 
+/* Separate Speed Card */
+.speed-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.speed-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+}
+
 .status-indicator {
     display: flex;
     align-items: center;
@@ -465,6 +479,10 @@ body {
         padding: 25px;
     }
     
+    .speed-card {
+        padding: 25px;
+    }
+    
     .status-indicator {
         flex-direction: column;
         gap: 15px;
@@ -525,6 +543,10 @@ body {
     }
     
     .connection-card {
+        padding: 20px;
+    }
+    
+    .speed-card {
         padding: 20px;
     }
     

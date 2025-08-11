@@ -28,13 +28,6 @@
                         </svg>
                         Check Connection
                     </button>
-                    
-                    <button class="speed-test-button" id="speedTestButton" onclick="runSpeedTest()">
-                        <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
-                        Speed Test
-                    </button>
                 </div>
                 
                 <div class="connection-details" id="connectionDetails">
@@ -52,6 +45,17 @@
                     </div>
                 </div>
                 
+            </div>
+            
+            <div class="speed-card" id="speedCard">
+                <div class="button-group">
+                    <button class="speed-test-button" id="speedTestButton" onclick="runSpeedTest()">
+                        <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        Speed Test
+                    </button>
+                </div>
                 <div class="speed-results" id="speedResults" style="display: none;">
                     <h3 class="speed-title">Speed Test Results</h3>
                     
@@ -106,7 +110,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="info-section">
                 <h3>How it works</h3>
                 <p>Click "Check Connection" to test your internet connectivity, or "Speed Test" to measure your upload and download speeds. The tool will attempt to reach reliable servers and measure actual network performance.</p>
