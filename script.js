@@ -12,6 +12,8 @@ const downloadSpeed = document.getElementById('downloadSpeed');
 const uploadSpeed = document.getElementById('uploadSpeed');
 const testDuration = document.getElementById('testDuration');
 const lastSpeedTest = document.getElementById('lastSpeedTest');
+const downloadStatus = document.getElementById('downloadStatus');
+const uploadStatus = document.getElementById('uploadStatus');
 const debugInfo = document.getElementById('debugInfo');
 const debugContent = document.getElementById('debugContent');
 
@@ -41,6 +43,12 @@ function logDebug(message) {
     debugContent.appendChild(logEntry);
     debugContent.scrollTop = debugContent.scrollHeight;
     console.log(`[DEBUG] ${message}`);
+}
+
+// Update speed status function
+function updateSpeedStatus(element, status, text) {
+    element.className = `speed-status ${status}`;
+    element.textContent = text;
 }
 
 // Main connection check function
@@ -129,10 +137,12 @@ async function runSpeedTest() {
     debugInfo.style.display = 'block';
     debugContent.innerHTML = '<p>Starting speed test...</p>';
     
-    // Reset values
-    downloadSpeed.textContent = 'Testing...';
-    uploadSpeed.textContent = 'Testing...';
-    testDuration.textContent = 'In progress...';
+    // Reset values and status
+    downloadSpeed.textContent = '-';
+    uploadSpeed.textContent = '-';
+    testDuration.textContent = '-';
+    updateSpeedStatus(downloadStatus, 'ready', 'Ready to test');
+    updateSpeedStatus(uploadStatus, 'ready', 'Ready to test');
     
     const startTime = performance.now();
     
@@ -141,13 +151,17 @@ async function runSpeedTest() {
         
         // Run download speed test
         logDebug('Testing download speed...');
+        updateSpeedStatus(downloadStatus, 'testing', 'Testing download...');
         const downloadResult = await testDownloadSpeed();
         logDebug(`Download test completed: ${downloadResult.toFixed(2)} Mbps`);
+        updateSpeedStatus(downloadStatus, 'completed', 'Download completed');
         
         // Run upload speed test
         logDebug('Testing upload speed...');
+        updateSpeedStatus(uploadStatus, 'testing', 'Testing upload...');
         const uploadResult = await testUploadSpeed();
         logDebug(`Upload test completed: ${uploadResult.toFixed(2)} Mbps`);
+        updateSpeedStatus(uploadStatus, 'completed', 'Upload completed');
         
         // Calculate total test duration
         const totalDuration = performance.now() - startTime;
@@ -167,15 +181,25 @@ async function runSpeedTest() {
         console.error('Speed test failed:', error);
         logDebug(`Primary speed test failed: ${error.message}`);
         
+        // Update status to failed
+        updateSpeedStatus(downloadStatus, 'failed', 'Download failed');
+        updateSpeedStatus(uploadStatus, 'failed', 'Upload failed');
+        
         // Try fallback speed test
         try {
             logDebug('Trying fallback speed test...');
+            updateSpeedStatus(downloadStatus, 'testing', 'Trying fallback...');
+            updateSpeedStatus(uploadStatus, 'testing', 'Trying fallback...');
+            
             const fallbackResult = await runFallbackSpeedTest();
             
             downloadSpeed.textContent = fallbackResult.download.toFixed(2);
             uploadSpeed.textContent = fallbackResult.upload.toFixed(2);
             testDuration.textContent = `${((performance.now() - startTime) / 1000).toFixed(1)}s`;
             lastSpeedTest.textContent = new Date().toLocaleTimeString();
+            
+            updateSpeedStatus(downloadStatus, 'completed', 'Download completed (fallback)');
+            updateSpeedStatus(uploadStatus, 'completed', 'Upload completed (fallback)');
             
             logDebug(`Fallback speed test completed: D=${fallbackResult.download.toFixed(2)} Mbps, U=${fallbackResult.upload.toFixed(2)} Mbps`);
             
@@ -189,6 +213,9 @@ async function runSpeedTest() {
             uploadSpeed.textContent = 'Failed';
             testDuration.textContent = 'Error';
             lastSpeedTest.textContent = new Date().toLocaleTimeString();
+            
+            updateSpeedStatus(downloadStatus, 'failed', 'Download failed');
+            updateSpeedStatus(uploadStatus, 'failed', 'Upload failed');
             
             updateStatus('disconnected', 'Speed test failed');
             showErrorMessage('Speed test failed. Please check your connection and try again.');
